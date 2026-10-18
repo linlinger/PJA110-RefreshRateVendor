@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Copyright (C) 2026 Oplus Project
+     SPDX-License-Identifier: Apache-2.0
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.oplus.refreshrate">
+
+    <!-- 后台服务 (静默版, prod) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- 锁定刷新率 (setRefreshRateSwitchingType, signature 权限) -->
+    <uses-permission android:name="android.permission.MODIFY_REFRESH_RATE_SWITCHING_TYPE" />
+    <!-- 设置用户偏好模式 (setUserPreferredDisplayMode, signature 权限) -->
+    <uses-permission android:name="android.permission.MODIFY_USER_PREFERRED_DISPLAY_MODE" />
+    <!-- 写入 peak_refresh_rate 设置 -->
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+
+    <application
+        android:label="@string/app_name"
+        android:theme="@android:style/Theme.Material.Light">
+
+        <!-- 设置界面 (通过 IA_SETTINGS 集成到系统设置, 显示分类) -->
+        <activity
+            android:name=".settings.RefreshRateSettingsActivity"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="com.android.settings.action.IA_SETTINGS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <!-- 设置分类: 显示 -->
+            <meta-data
+                android:name="com.android.settings.category"
+                android:value="com.android.settings.category.ia.display" />
+            <meta-data
+                android:name="com.android.settings.order"
+                android:value="-5" />
+            <meta-data
+                android:name="com.android.settings.profile"
+                android:value="primary_profile_only" />
+        </activity>
+
+        <!-- per-app 自定义: 应用列表 + 单应用编辑 -->
+        <activity
+            android:name=".settings.PerAppListActivity"
+            android:exported="true"
+            android:label="@string/per_app_title">
+            <intent-filter>
+                <action android:name="com.oplus.refreshrate.PER_APP_RULES" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".settings.PerAppEditActivity"
+            android:exported="false"
+            android:label="@string/per_app_title" />
+
+        <!-- 帮助页 (WebView 加载本地 assets/help_zh.html) -->
+        <activity
+            android:name=".settings.HelpActivity"
+            android:exported="true"
+            android:label="@string/help_title">
+            <intent-filter>
+                <action android:name="com.oplus.refreshrate.HELP" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- 调度服务 (静默后台, 无前台通知) -->
+        <service
+            android:name=".RefreshRateService"
+            android:exported="true"
+            android:stopWithTask="false" />
+
+    </application>
+</manifest>

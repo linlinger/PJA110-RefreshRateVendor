@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Copyright (C) 2026 Oplus Project
+     SPDX-License-Identifier: Apache-2.0
+
+     繁體中文 (zh-rTW)。
+-->
+<resources>
+    <string name="app_name">更新率調度</string>
+    <string name="settings_title">更新率模式</string>
+
+    <!-- 更新率設定 -->
+    <string name="refresh_rate_title">更新率模式</string>
+    <string name="refresh_rate_summary">選擇更新率調度策略</string>
+
+    <string-array name="refresh_rate_entries">
+        <item>智慧模式 (自動調度)</item>
+        <item>鎖定 60Hz</item>
+        <item>鎖定 90Hz</item>
+        <item>鎖定 120Hz</item>
+    </string-array>
+    <string-array name="refresh_rate_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </string-array>
+    <string name="iris_title">MEMC 插幀 (IRIS 獨顯)</string>
+    <string name="iris_desc">按應用程式插幀/超解析度, 設定相容 iris_helper (iris_config.json)。預設關閉, 進出時序對齊 ColorOS (ABYP↔PT)</string>
+
+    <!-- 每應用程式自訂 -->
+    <string name="per_app_title">應用程式行為自訂</string>
+    <string name="per_app_summary">為每個應用程式個別設定更新率模式和 MEMC 行為</string>
+    <string name="per_app_list_hint">點擊應用程式設定它的更新率模式和 MEMC 行為。儲存後切到該應用程式即生效。</string>
+    <string name="per_app_icon_desc">應用程式圖示</string>
+    <string name="per_app_not_configured">未設定 (跟隨全域設定)</string>
+    <string name="per_app_mode_prefix">鎖定</string>
+    <string name="per_app_mode_desc">該應用程式在前台時的面板更新率。使用者規則優先級最高, 會覆蓋智慧調度和 MEMC 的自動鎖幀。</string>
+    <string name="per_app_mode_auto">智慧調度\n跟隨全域場景投票: 遊戲提速、靜止 3 秒降檔、觸控加速</string>
+    <string name="per_app_mode_60">鎖定 60Hz\n省電; 適合聊天、閱讀、音樂類應用</string>
+    <string name="per_app_mode_90">鎖定 90Hz\n流暢與功耗均衡</string>
+    <string name="per_app_mode_120">鎖定 120Hz\n最流暢; 高功耗, 適合高更新率遊戲/滑動體驗</string>
+    <string name="per_app_mode_label">更新率模式</string>
+    <string name="per_app_memc_label">MEMC 插幀 (IRIS 獨顯)</string>
+    <string name="per_app_memc_desc">決定該應用程式前台時是否對晶片下發插幀/超解析度參數。進出晶片模式由本應用自動管理 (ABYP↔PT), 異常一律回退旁路。</string>
+    <string name="per_app_memc_default">預設 (由 iris_config.json 決定)\n設定檔內有該套件名就開, 沒有就不開</string>
+    <string name="per_app_memc_force_on">強制開啟\n即使 iris_config.json 沒設定這個套件名也進 MEMC</string>
+    <string name="per_app_memc_force_off">強制關閉\n即使設定檔內有該套件名也不進 MEMC</string>
+    <string name="per_app_params_label">MEMC 參數 (進階, 可留空)</string>
+    <string name="per_app_params_desc">每行一條 iris 命令, 留空則使用 iris_config.json 中該應用程式的參數。命令格式: Type 後跟若干參數, 空格分隔。</string>
+    <string name="per_app_params_hint">每行一條命令, 如:\n258 3 10 0 1\n273 3 1 255 2\n留空則使用 iris_config.json 的參數</string>
+    <string name="per_app_params_ref_258">258 插幀主開關: 遊戲 6 參「258 6 10 -1 延遲檔 -1 預設 原始幀率」(延遲檔 18 普通/34 低/50 超低), 影片 3 參「258 3 10 0 x」; Param0: 0 關/10 單插/40 雙插</string>
+    <string name="per_app_params_ref_273">273 超解析度: 「273 3 1 預設 SR模式」, 預設 255=通用, SR 模式 1=LPSR 低功耗/2=HESR 高效</string>
+    <string name="per_app_params_ref_267">267 SDR2HDR: 「267 3 預設 強度」, 預設 1=影片/48=原神, 強度 0~100 預設 100</string>
+    <string name="per_app_open_help">查看 iris 命令參數詳解</string>
+    <string name="per_app_save">儲存</string>
+    <string name="per_app_delete">恢復預設 (刪除規則)</string>
+    <string name="per_app_saved">已儲存, 切到該應用程式生效</string>
+    <string name="per_app_deleted">已恢復預設</string>
+    <string name="per_app_save_failed">寫入失敗 (權限不足?)</string>
+
+    <!-- 說明頁 -->
+    <string name="help_title">說明</string>
+    <string name="settings_help_entry">說明與命令參考</string>
+    <string name="settings_help_summary">使用說明、iris 命令參數詳解、設定路徑與常見問題</string>
+</resources>

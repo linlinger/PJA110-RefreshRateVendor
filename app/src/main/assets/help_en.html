@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<!--
+    Copyright (C) 2026 Oplus Project
+    SPDX-License-Identifier: Apache-2.0
+    Help page (English) — app usage + IRIS display chip command reference
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --fg: #1c1b1f; --fg2: #49454f; --line: #e0dfe3;
+    --acc: #345ca8; --warn-fg: #8a5a00; --warn-bg: #fff4e0;
+    --ok-fg: #1c6b3c; --ok-bg: #e6f4ea; --code-bg: #f2f0f4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px 16px 48px;
+    font-family: sans-serif; font-size: 15px; line-height: 1.65;
+    color: var(--fg); background: #fff;
+  }
+  h1 { font-size: 21px; margin: 8px 0 2px; }
+  h2 {
+    font-size: 17px; margin: 30px 0 8px; color: var(--acc);
+    border-bottom: 2px solid var(--acc); padding-bottom: 4px;
+  }
+  h3 { font-size: 15px; margin: 18px 0 6px; }
+  p, li { color: var(--fg); }
+  .sub { color: var(--fg2); font-size: 13px; margin: 0 0 4px; }
+  code {
+    font-family: monospace; font-size: 13px;
+    background: var(--code-bg); border-radius: 4px; padding: 1px 5px;
+  }
+  pre {
+    background: var(--code-bg); border-radius: 8px; padding: 10px 12px;
+    overflow-x: auto; font-size: 12.5px; line-height: 1.5; margin: 8px 0;
+  }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 13.5px; }
+  th, td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); white-space: nowrap; }
+  .warn {
+    background: var(--warn-bg); color: var(--warn-fg);
+    border-left: 4px solid #e8a33d; border-radius: 4px;
+    padding: 8px 12px; margin: 10px 0; font-size: 13.5px;
+  }
+  .ok {
+    background: var(--ok-bg); color: var(--ok-fg);
+    border-left: 4px solid #4caf7d; border-radius: 4px;
+    padding: 8px 12px; margin: 10px 0; font-size: 13.5px;
+  }
+  .param { font-weight: bold; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<h1>Refresh Rate Manager · Help</h1>
+<p class="sub">OplusRefreshRate for PJA110 (OnePlus Ace 2 Pro) — app edition</p>
+
+<h2 id="intro">What this app does</h2>
+<p>This app takes over panel refresh rate scheduling and the IRIS display chip (PixelWorks) display enhancements. It has three parts:</p>
+<ul>
+  <li><b>Refresh rate scheduling</b>: smart mode makes decisions by scene voting (games 120Hz, downgrade after 3s idle, touch speed-up), or lock 60/90/120Hz globally.</li>
+  <li><b>MEMC frame insertion (IRIS chip)</b>: sends frame insertion / super resolution / SDR2HDR parameters per app. Entry/exit follows the ColorOS sequence (clear → ABYP → lock 120Hz → switch to PT → write params); on screen-off or exit it always falls back to ABYP bypass to prevent the freeze-causing mode-switch storm.</li>
+  <li><b>Per-app behavior</b>: set refresh rate mode and MEMC behavior per app. User rules have the highest priority.</li>
+</ul>
+
+<h2 id="quickstart">Quick start</h2>
+<ol>
+  <li>Open "Refresh rate mode" and pick <b>Smart</b> or a locked level.</li>
+  <li>For MEMC: enable the "MEMC frame insertion" master switch (off by default), then either pick "Force on" for your target app under "Per-app behavior", or add its package name to the config file.</li>
+  <li>Verify: <code>adb logcat -s ORR/Iris ORR/IrisExec ORR/PerApp ORR/Service ORR/Scene</code></li>
+</ol>
+
+<h2 id="paths">Config file paths</h2>
+<table>
+  <tr><th>File</th><th>Purpose</th></tr>
+  <tr><td><code>/data/system/orr/iris_config.json</code></td><td>MEMC config (production, highest priority). Compatible with iris_helper community configs.</td></tr>
+  <tr><td><code>/data/local/tmp/orr_iris_config.json</code></td><td>MEMC config (debug; just <code>adb push</code>).</td></tr>
+  <tr><td><code>/data/system/orr/app_rules.json</code></td><td>Per-app rules (production). Written automatically by the settings UI.</td></tr>
+  <tr><td><code>/data/local/tmp/orr_app_rules.json</code></td><td>Per-app rules (debug).</td></tr>
+  <tr><td>App external dir <code>app_rules.json</code></td><td>Fallback when root write is unavailable; the service reads it too.</td></tr>
+</table>
+<div class="ok">Configs hot-reload: the service re-reads them when an app comes to the foreground. Change config, switch apps, done — no restart needed.</div>
+
+<h2 id="cmd">iris command format</h2>
+<p>Each command maps to one <code>irisConfig</code> invocation, <b>space-separated</b> parameters:</p>
+<pre><code>irisConfig &lt;Type&gt; &lt;Param0&gt; &lt;Param1&gt; ...</code></pre>
+<p>Each string in the JSON config is one command (without the <code>irisConfig</code> prefix), e.g. <code>"258 3 10 0 1"</code>. Unfilled parameter slots default to 0. Commands for an app are sent in order.</p>
+
+<h3 id="t56">Type 56 — chip mode switch (ABP bypass)</h3>
+<p>Controls the display chip's working mode; the core of the whole safety model. Managed automatically — <b>do not send it casually in custom configs</b>.</p>
+<table>
+  <tr><th>Value</th><th>Meaning</th></tr>
+  <tr><td>0</td><td>Exit ABP; chip enters PT (Pass-Through) working mode — required for MEMC/SR to take effect</td></tr>
+  <tr><td>1</td><td>Enter ABP (Analog Bypass); chip does not process the image</td></tr>
+  <tr><td>16</td><td>Standby ABP</td></tr>
+  <tr><td>32</td><td>Sleep ABP — default safe state when the system is idle</td></tr>
+</table>
+<p class="sub">Read current state with <code>irisConfig -getfeature 56</code> (note: <code>-get 56</code> segfaults, don't use it). Read-only sysfs mirror: <code>/sys/kernel/iris/display_mode</code>.</p>
+
+<h3 id="t258">Type 258 — MEMC / HDR master switch</h3>
+<p>Master control of frame insertion and HDR. Video uses the 3-param form, games the 6-param form.</p>
+<table>
+  <tr><th>Slot</th><th>Values</th><th>Meaning</th></tr>
+  <tr>
+    <td class="param">Param 0<br>Mode</td>
+    <td>0 / 2 / 10 / 14 / 40</td>
+    <td>
+      0 = off (HDR disabled)<br>
+      2 = HDR on (not supported on some chips)<br>
+      10 = single MEMC (common)<br>
+      14 = TNR temporal noise reduction (chip-dependent)<br>
+      40 = dual MEMC (chip-dependent)
+    </td>
+  </tr>
+  <tr><td class="param">Param 1</td><td>-1</td><td>Ignored; fill -1 as placeholder.</td></tr>
+  <tr>
+    <td class="param">Param 2<br>Scene (bitfield)</td>
+    <td>see below</td>
+    <td>
+      Combined per bit segments (8421 method):<br>
+      • <b>bit0~3 scene</b>: 0 normal video · 2 normal game (recommended) · 3 eMV game 1 · 4 eMV game 2 · 5 short video · 6 allow eMV API<br>
+      • <b>bit4~7 latency</b>: 0 OSD · 1 normal · 2 low · 3 ultra-low (lower latency = more artifacts)<br>
+      • <b>bit8~11 MEMC level</b>: 0 level0<br>
+      • <b>bit12~15 N2M</b>: 0 off · 1 on<br>
+      Common values: <code>2</code>=OSD · <code>18</code>=normal-latency game · <code>34</code>=low-latency game · <code>50</code>=ultra-low-latency game
+    </td>
+  </tr>
+  <tr><td class="param">Param 3</td><td>-1</td><td>Ignored; fill -1 as placeholder.</td></tr>
+  <tr>
+    <td class="param">Param 4<br>Game preset</td>
+    <td>id</td>
+    <td>Chip-internal game list id (see <code>/odm/etc/iris_configs.xml</code>). <b>255 = generic default preset</b> — use it for games without a dedicated preset, otherwise mismatched resolution may silently disable effects.</td>
+  </tr>
+  <tr>
+    <td class="param">Param 5<br>Source fps</td>
+    <td>0 / 30 / 45 / 60 …</td>
+    <td>The game's actual frame rate. <b>Prefer an explicit value</b> (e.g. 60) over 0 (auto) — explicit fps gives more stable insertion.</td>
+  </tr>
+  <tr>
+    <td class="param">Param 6<br>Crosshair</td>
+    <td>0 / 1 / 2</td>
+    <td>0 off · 1 PUBG Mobile crosshair · 2 PUBG Mobile holographic. Use 0 for other games.</td>
+  </tr>
+</table>
+<p>Fixed formats at a glance:</p>
+<pre><code>Game (6 params):  258 6 10 -1 &lt;latency&gt; -1 &lt;preset&gt; &lt;source fps&gt;
+Example:          258 6 40 -1 34 -1 3 60    (dual MEMC + low latency + Genshin preset + 60fps)
+Video (3 params): 258 3 10 0 &lt;0=off / 1=on&gt;
+Example:          258 3 10 0 1</code></pre>
+
+<h3 id="t267">Type 267 — SDR to HDR</h3>
+<table>
+  <tr><th>Slot</th><th>Values</th><th>Meaning</th></tr>
+  <tr><td class="param">Param 0</td><td>3 / 4 / 5</td><td>Setting kind: 3 preset SDR2HDR · 4 preset (Param1 = game id) · 5 preset EDR (Param1 = game id).</td></tr>
+  <tr>
+    <td class="param">Param 1<br>Preset</td>
+    <td>id</td>
+    <td>
+      0 all off · 1 video (recommended) · 2 enhanced video · 3 game · 4 low-power video · 5 low-power game · 8 daylight · 13 vivid · 14 bright · 15 gentle<br>
+      Game presets: 47 Snowbreak · <b>48 Genshin (recommended)</b> · 49 Genshin conservative · 50 Genshin bright · 54 Girls Frontline 2 · 55 Honkai: Star Rail · 56 Honor of Kings
+    </td>
+  </tr>
+  <tr><td class="param">Param 2</td><td>0~100</td><td>Effect strength, default 100.</td></tr>
+</table>
+<p>Off example: <code>267 2 3 0</code> (what the "off" section uses).</p>
+
+<h3 id="t273">Type 273 — SR super resolution</h3>
+<table>
+  <tr><th>Slot</th><th>Values</th><th>Meaning</th></tr>
+  <tr><td class="param">Param 0</td><td>0 / 1</td><td>0 off (used in "off" section) · 1 on.</td></tr>
+  <tr>
+    <td class="param">Param 1<br>Game id</td>
+    <td>id</td>
+    <td>
+      0 PUBG Mobile · 3 Genshin · 4 Honkai Impact 3 · 10 Honor of Kings · 16 League of Legends Mobile · 155 Honkai: Star Rail · 200 Snowbreak · 201 Girls Frontline 2 ·
+      <b>255 = generic auto (recommended)</b>
+    </td>
+  </tr>
+  <tr>
+    <td class="param">Param 2<br>SR mode</td>
+    <td>1 / 2</td>
+    <td>1 = LPSR low-power SR (~0.3W) · 2 = HESR high-efficiency SR (~0.5–0.6W). Only some chips (X7 Gen 2) support it; ignored elsewhere.</td>
+  </tr>
+</table>
+<p>Common combo: <code>273 3 1 255 2</code> = SR on + generic preset + LPSR.</p>
+
+<h3 id="t47">Type 47 — HDR mode (chip-dependent)</h3>
+<table>
+  <tr><th>Value</th><th>Meaning</th></tr>
+  <tr><td>0</td><td>Disabled (recommended default)</td></tr>
+  <tr><td>61 / 62</td><td>HLG HDR / HDR10</td></tr>
+  <tr><td>3~8</td><td>Scene HDR: online video / short video / local video / album / game / reading</td></tr>
+  <tr><td>9~14</td><td>AI-enhanced scene variants</td></tr>
+</table>
+
+<h2 id="off">The "off" section (clear commands)</h2>
+<p>The top-level <code>"off"</code> array in <code>iris_config.json</code> holds <b>clear commands</b>: sent before entering and on exiting MEMC to reset the chip. <b>Do not delete it</b>. Standard content:</p>
+<pre><code>"off": [
+    "258 1 0",
+    "267 2 3 0",
+    "273 1 0"
+]</code></pre>
+
+<h2 id="tips">Cautions</h2>
+<div class="warn"><b>Never enable MEMC for IRX games!</b> Games offering a built-in "display-chip 120fps" option (IRX render acceleration) + MEMC cause double processing: visual glitches and a huge power hit.</div>
+<ul>
+  <li>Parameters vary by chip (X7 PX8768 / X7 Gen 2 PX8778); when unsure check <code>/odm/etc/iris_configs.xml</code> and use the <b>255 generic preset</b> for games without a dedicated one.</li>
+  <li>Fill Param 5 (source fps) with a real value; many systems lock games to 40/60fps then insert — use the <b>actual running fps</b>, not the target.</li>
+  <li>While MEMC is active the app locks the panel to 120Hz and temporarily takes over rate decisions (priority 70; user rules at 75 override); smart scheduling resumes on exit.</li>
+  <li>Video apps (Bilibili/Douyin etc.) use the 3-param form <code>258 3 10 0 x</code>; games use the 6-param form. Mixing them may silently fail.</li>
+</ul>
+
+<h2 id="faq">FAQ</h2>
+<table>
+  <tr><th>Symptom</th><th>Check</th></tr>
+  <tr><td>"Write failed" when saving a rule</td><td><code>/data/system/orr/</code> needs privileged access; ROM-bundled install can write, debug builds fall back to the app external dir automatically (feature still works).</td></tr>
+  <tr><td>MEMC does nothing for a configured app</td><td>① Master switch off; ② check <code>logcat -s ORR/IrisExec</code> for irisConfig results; ③ confirm <code>/odm/bin/irisConfig</code> exists (MEMC auto-disables with a log note otherwise).</td></tr>
+  <tr><td>Insertion has no effect</td><td>Verify command form (game 6-param / video 3-param), preset id, Param 5 source fps; use <code>irisConfig -getfeature 56</code> to confirm the chip entered PT.</td></tr>
+  <tr><td>Apps drop to 60Hz</td><td>Use smart mode (downgrade after 3s idle is intended); for constant drops capture <code>logcat -s ORR/Scene ORR/Service</code> to inspect votes.</td></tr>
+  <tr><td>Screen freeze history (known issue)</td><td>The fallback logic always returns to ABYP on any failure path. If manual irisConfig play freezes the screen, <code>irisConfig 56 1</code> returns to bypass immediately.</td></tr>
+</table>
+
+<h2 id="logcat">Log tags</h2>
+<table>
+  <tr><th>Tag</th><th>Content</th></tr>
+  <tr><td><code>ORR/Service</code></td><td>Service lifecycle, mode switches</td></tr>
+  <tr><td><code>ORR/Scene</code></td><td>Foreground app, scene votes</td></tr>
+  <tr><td><code>ORR/PerApp</code></td><td>Per-app rule loading and voting</td></tr>
+  <tr><td><code>ORR/Iris</code></td><td>MEMC state machine (enter/exit sequences, generation)</td></tr>
+  <tr><td><code>ORR/IrisExec</code></td><td>Per-command irisConfig execution results</td></tr>
+</table>
+
+</body>
+</html>

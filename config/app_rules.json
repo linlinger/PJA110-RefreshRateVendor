@@ -1,0 +1,31 @@
+{
+    "com.miHoYo.Yuanshen": {
+        "mode": "auto",
+        "memc": true
+    },
+    "com.miHoYo.hkrpg": {
+        "mode": "auto",
+        "memc": true
+    },
+    "com.ss.android.ugc.aweme": {
+        "mode": "auto",
+        "memc": true
+    },
+    "com.bilibili.app.in": {
+        "mode": "auto",
+        "memc": true
+    },
+    "org.ppsspp.ppsspp": {
+        "mode": "120",
+        "memc": true,
+        "memc_params": ["273 3 1 255 2"]
+    },
+    "com.tencent.mm": {
+        "mode": "60",
+        "memc": false
+    },
+    "com.netease.cloudmusic": {
+        "mode": "90",
+        "memc": false
+    }
+}

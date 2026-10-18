@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 Oplus Project
+    SPDX-License-Identifier: Apache-2.0
+
+    vendor priv-app 签名权限白名单。
+    ROM 集成: 复制到 /vendor/etc/permissions/ (Android.bp 里加 prebuilt_etc 或
+    PRODUCT_COPY_FILES)。
+-->
+<permissions>
+    <privapp-permissions package="com.oplus.refreshrate">
+        <!-- 锁定刷新率 (setRefreshRateSwitchingType) -->
+        <permission name="android.permission.MODIFY_REFRESH_RATE_SWITCHING_TYPE" />
+        <!-- 设置用户偏好刷新率 (setUserPreferredDisplayMode) -->
+        <permission name="android.permission.MODIFY_USER_PREFERRED_DISPLAY_MODE" />
+        <!-- 写入 peak_refresh_rate 设置 -->
+        <permission name="android.permission.WRITE_SETTINGS" />
+        <!-- 场景感知 (前台应用监听) -->
+        <permission name="android.permission.PACKAGE_USAGE_STATS" />
+        <!-- vendor 化后续功能预留 -->
+        <permission name="android.permission.WRITE_SECURE_SETTINGS" />
+        <permission name="android.permission.DEVICE_POWER" />
+    </privapp-permissions>
+</permissions>

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<!--
+    Copyright (C) 2026 Oplus Project
+    SPDX-License-Identifier: Apache-2.0
+    帮助页 — 应用使用说明 + IRIS 独显命令参数详解
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --fg: #1c1b1f; --fg2: #49454f; --line: #e0dfe3;
+    --acc: #345ca8; --warn-fg: #8a5a00; --warn-bg: #fff4e0;
+    --ok-fg: #1c6b3c; --ok-bg: #e6f4ea; --code-bg: #f2f0f4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px 16px 48px;
+    font-family: sans-serif; font-size: 15px; line-height: 1.65;
+    color: var(--fg); background: #fff;
+  }
+  h1 { font-size: 21px; margin: 8px 0 2px; }
+  h2 {
+    font-size: 17px; margin: 30px 0 8px; color: var(--acc);
+    border-bottom: 2px solid var(--acc); padding-bottom: 4px;
+  }
+  h3 { font-size: 15px; margin: 18px 0 6px; }
+  p, li { color: var(--fg); }
+  .sub { color: var(--fg2); font-size: 13px; margin: 0 0 4px; }
+  code {
+    font-family: monospace; font-size: 13px;
+    background: var(--code-bg); border-radius: 4px; padding: 1px 5px;
+  }
+  pre {
+    background: var(--code-bg); border-radius: 8px; padding: 10px 12px;
+    overflow-x: auto; font-size: 12.5px; line-height: 1.5; margin: 8px 0;
+  }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 13.5px; }
+  th, td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); white-space: nowrap; }
+  .warn {
+    background: var(--warn-bg); color: var(--warn-fg);
+    border-left: 4px solid #e8a33d; border-radius: 4px;
+    padding: 8px 12px; margin: 10px 0; font-size: 13.5px;
+  }
+  .ok {
+    background: var(--ok-bg); color: var(--ok-fg);
+    border-left: 4px solid #4caf7d; border-radius: 4px;
+    padding: 8px 12px; margin: 10px 0; font-size: 13.5px;
+  }
+  .param { font-weight: bold; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<h1>刷新率调度 · 帮助</h1>
+<p class="sub">OplusRefreshRate for PJA110 (一加 Ace 2 Pro) — App 版</p>
+
+<h2 id="intro">应用是做什么的</h2>
+<p>本应用接管面板刷新率调度与 IRIS 独显芯片（PixelWorks）的显示增强，包含三部分：</p>
+<ul>
+  <li><b>刷新率调度</b>：智能模式按场景投票决策（游戏 120Hz、静止 3 秒后降档、触摸加速等），也可全局锁定 60/90/120Hz。</li>
+  <li><b>MEMC 插帧（IRIS 独显）</b>：按应用对芯片下发插帧 / 超分 / SDR2HDR 参数。进出时序对齐 ColorOS（清场 → ABYP → 锁 120Hz → 切 PT → 写参数），息屏或退出时一律兜底回 ABYP 旁路，防止切换风暴导致屏幕冻结。</li>
+  <li><b>应用行为自定义</b>：为每个应用单独设置刷新率模式与 MEMC 行为，用户规则优先级最高。</li>
+</ul>
+
+<h2 id="quickstart">快速上手</h2>
+<ol>
+  <li>打开「刷新率模式」，选择<b>智能模式</b>或锁定档位。</li>
+  <li>要用 MEMC 插帧：先打开「MEMC 插帧」总开关（默认关闭），再在「应用行为自定义」里给目标应用选「强制开启」或在配置文件里加包名。</li>
+  <li>验证：<code>adb logcat -s ORR/Iris ORR/IrisExec ORR/PerApp ORR/Service ORR/Scene</code></li>
+</ol>
+
+<h2 id="paths">配置文件路径</h2>
+<table>
+  <tr><th>文件</th><th>用途</th></tr>
+  <tr><td><code>/data/system/orr/iris_config.json</code></td><td>MEMC 配置（正式，优先级最高）。格式兼容 iris_helper 社区配置。</td></tr>
+  <tr><td><code>/data/local/tmp/orr_iris_config.json</code></td><td>MEMC 配置（调试用，adb push 即可）。</td></tr>
+  <tr><td><code>/data/system/orr/app_rules.json</code></td><td>每应用规则（正式）。设置界面保存时自动写入。</td></tr>
+  <tr><td><code>/data/local/tmp/orr_app_rules.json</code></td><td>每应用规则（调试用）。</td></tr>
+  <tr><td>应用外部目录 <code>app_rules.json</code></td><td>无 root 权限写入时的 fallback 位置，服务同样会读取。</td></tr>
+</table>
+<div class="ok">配置支持热加载：服务在应用切到前台时重新读取，改完配置切一下前台即生效，无需重启服务或手机。</div>
+
+<h2 id="cmd">iris 命令格式</h2>
+<p>每条命令对应一次 <code>irisConfig</code> 调用，格式为<b>空格分参</b>：</p>
+<pre><code>irisConfig &lt;Type&gt; &lt;Param0&gt; &lt;Param1&gt; ...</code></pre>
+<p>JSON 配置里每条字符串就是一条命令（不带 <code>irisConfig</code> 前缀），例如 <code>"258 3 10 0 1"</code>。未填写的参数位置按 0 处理。同一应用的命令按顺序依次下发。</p>
+
+<h3 id="t56">Type 56 — 芯片模式开关（ABP 旁路）</h3>
+<p>控制独显芯片工作模式，是整个系统安全的核心。本应用自动管理，<b>手动配置时请勿随意下发</b>。</p>
+<table>
+  <tr><th>参数值</th><th>含义</th></tr>
+  <tr><td>0</td><td>退出 ABP，芯片进入 PT（Pass-Through）工作模式 —— 插帧/超分生效的前提</td></tr>
+  <tr><td>1</td><td>进入 ABP（Analog Bypass）模拟旁路，芯片不处理画面</td></tr>
+  <tr><td>16</td><td>待机 ABP（Standby）</td></tr>
+  <tr><td>32</td><td>睡眠 ABP（Sleep）—— 系统静止时的默认安全态</td></tr>
+</table>
+<p class="sub">读取当前状态用 <code>irisConfig -getfeature 56</code>（注意：<code>-get 56</code> 会段错误，不要用）。sysfs 只读镜像：<code>/sys/kernel/iris/display_mode</code>。</p>
+
+<h3 id="t258">Type 258 — MEMC / HDR 主开关</h3>
+<p>插帧与 HDR 的总控，视频用 3 参数格式，游戏用 6 参数格式。</p>
+<table>
+  <tr><th>位置</th><th>取值</th><th>含义</th></tr>
+  <tr>
+    <td class="param">Param 0<br>模式</td>
+    <td>
+      0 / 2 / 10 / 14 / 40
+    </td>
+    <td>
+      0 = 关闭（禁用 HDR）<br>
+      2 = 启用 HDR（部分芯片不支持）<br>
+      10 = 单路 MEMC 插帧（单插，常用）<br>
+      14 = TNR 时域降噪（部分芯片不支持）<br>
+      40 = 双路 MEMC 插帧（双插，部分芯片不支持）
+    </td>
+  </tr>
+  <tr><td class="param">Param 1</td><td>-1</td><td>忽略位，填 -1 占位。</td></tr>
+  <tr>
+    <td class="param">Param 2<br>场景（位域）</td>
+    <td>见下</td>
+    <td>
+      按 bit 分段组合（8421 法拼接）：<br>
+      • <b>bit0~3 场景</b>：0 普通视频 · 2 普通游戏（推荐） · 3 eMV 游戏模式1 · 4 eMV 游戏模式2 · 5 短视频 · 6 允许 eMV API<br>
+      • <b>bit4~7 延迟档</b>：0 OSD · 1 普通延迟 · 2 低延迟 · 3 超低延迟（延迟越低画面瑕疵越多）<br>
+      • <b>bit8~11 MEMC 级别</b>：0 级别0<br>
+      • <b>bit12~15 N2M</b>：0 禁用 · 1 启用<br>
+      常用组合值：<code>2</code>=OSD 模式 · <code>18</code>=普通延迟游戏 · <code>34</code>=低延迟游戏 · <code>50</code>=超低延迟游戏
+    </td>
+  </tr>
+  <tr><td class="param">Param 3</td><td>-1</td><td>忽略位，填 -1 占位。</td></tr>
+  <tr>
+    <td class="param">Param 4<br>游戏预设</td>
+    <td>编号</td>
+    <td>芯片内部的游戏清单编号（详见 <code>/odm/etc/iris_configs.xml</code>）。<b>255 = 通用默认预设</b>，无独立预设的游戏一律填 255，否则可能因分辨率不匹配不生效。</td>
+  </tr>
+  <tr>
+    <td class="param">Param 5<br>原始帧率</td>
+    <td>0 / 30 / 45 / 60 …</td>
+    <td>游戏的原始帧率。<b>建议填具体数值</b>（如 60），不要填 0 让芯片自动匹配 —— 明确帧率插帧效果更稳。</td>
+  </tr>
+  <tr>
+    <td class="param">Param 6<br>准星辅助</td>
+    <td>0 / 1 / 2</td>
+    <td>0 关闭 · 1 和平精英准星增强 · 2 和平精英全息。其他游戏填 0。</td>
+  </tr>
+</table>
+<p>固定格式速记：</p>
+<pre><code>游戏（6 参数）: 258 6 10 -1 &lt;延迟档&gt; -1 &lt;预设&gt; &lt;原始帧率&gt;
+示例:         258 6 40 -1 34 -1 3 60    (双插 + 低延迟 + 原神预设 + 60帧)
+视频（3 参数）: 258 3 10 0 &lt;0=关超分联送 / 1=开&gt;
+示例:         258 3 10 0 1</code></pre>
+
+<h3 id="t267">Type 267 — SDR 转 HDR</h3>
+<table>
+  <tr><th>位置</th><th>取值</th><th>含义</th></tr>
+  <tr><td class="param">Param 0</td><td>3 / 4 / 5</td><td>设置种类：3 预设 SDR2HDR · 4 预设（Param1 为游戏编号）· 5 预设 EDR（Param1 为游戏编号）。</td></tr>
+  <tr>
+    <td class="param">Param 1<br>预设编号</td>
+    <td>见右</td>
+    <td>
+      0 全部关闭 · 1 视频（推荐） · 2 增强视频 · 3 游戏 · 4 低功耗视频 · 5 低功耗游戏 · 8 日光场景 · 13 生动 · 14 明亮 · 15 温和<br>
+      游戏专用：47 尘白禁区 · <b>48 原神（推荐）</b> · 49 原神保守 · 50 原神明亮 · 54 少女前线2 · 55 星穹铁道 · 56 王者荣耀
+    </td>
+  </tr>
+  <tr><td class="param">Param 2</td><td>0~100</td><td>效果强度，默认 100。</td></tr>
+</table>
+<p>关闭示例：<code>267 2 3 0</code>（off 段里用的就是它）。</p>
+
+<h3 id="t273">Type 273 — SR 超分辨率</h3>
+<table>
+  <tr><th>位置</th><th>取值</th><th>含义</th></tr>
+  <tr><td class="param">Param 0</td><td>0 / 1</td><td>0 关闭 SR（off 段用）· 1 启用 SR。</td></tr>
+  <tr>
+    <td class="param">Param 1<br>游戏编号</td>
+    <td>编号</td>
+    <td>
+      0 和平精英 · 3 原神 · 4 崩坏3 · 10 王者荣耀 · 16 英雄联盟手游 · 155 星穹铁道 · 200 尘白禁区 · 201 少女前线2 ·
+      <b>255 = 默认自动匹配（通用推荐）</b>
+    </td>
+  </tr>
+  <tr>
+    <td class="param">Param 2<br>SR 模式</td>
+    <td>1 / 2</td>
+    <td>1 = LPSR 低功耗超分（约 0.3W） · 2 = HESR 高效率超分（约 0.5~0.6W）。仅部分芯片（X7 Gen 2）支持；不支持的芯片忽略此位。</td>
+  </tr>
+</table>
+<p>常用组合：<code>273 3 1 255 2</code> = 启用 SR + 通用预设 + LPSR。</p>
+
+<h3 id="t47">Type 47 — HDR 模式（部分芯片不支持）</h3>
+<table>
+  <tr><th>取值</th><th>含义</th></tr>
+  <tr><td>0</td><td>禁用（推荐默认）</td></tr>
+  <tr><td>61 / 62</td><td>HLG HDR / HDR10</td></tr>
+  <tr><td>3~8</td><td>场景 HDR：在线视频 / 短视频 / 本地视频 / 相册 / 游戏 / 阅读</td></tr>
+  <tr><td>9~14</td><td>AI 增强版对应场景</td></tr>
+</table>
+
+<h2 id="off">off 段（关闭命令）</h2>
+<p><code>iris_config.json</code> 顶层的 <code>"off"</code> 数组是<b>清场命令</b>：每次进入 MEMC 前和退出时都会下发，确保芯片回到干净状态。<b>不可删除</b>，标准内容：</p>
+<pre><code>"off": [
+    "258 1 0",
+    "267 2 3 0",
+    "273 1 0"
+]</code></pre>
+
+<h2 id="tips">注意事项</h2>
+<div class="warn"><b>IRX 游戏不要开 MEMC！</b>游戏内提供「独显加速 120 帧」选项的游戏（走 IRX 渲染加速）再叠加 MEMC 会双重处理，画面异常且功耗暴涨。</div>
+<ul>
+  <li>芯片参数因型号而异（X7 PX8768 / X7 Gen 2 PX8778），不确定时以设备 <code>/odm/etc/iris_configs.xml</code> 为准；无独立预设的游戏用 <b>255 通用预设</b>。</li>
+  <li>Param 5（原始帧率）尽量填具体值；很多系统会把游戏锁 40/60 帧再插帧，填游戏<b>实际运行帧率</b>而非目标帧率。</li>
+  <li>MEMC 开启期间本应用会锁定面板 120Hz 并临时接管刷新率决策（优先级 70，用户规则 75 可覆盖），退出后恢复智能调度。</li>
+  <li>视频类应用（B 站 / 抖音等）用视频格式 <code>258 3 10 0 x</code>；游戏类用 6 参数格式，格式混用可能不生效。</li>
+</ul>
+
+<h2 id="faq">常见问题</h2>
+<table>
+  <tr><th>现象</th><th>排查</th></tr>
+  <tr><td>保存规则提示写入失败</td><td>正式路径 <code>/data/system/orr/</code> 需要 privileged 权限；ROM 内置安装可写，debug 安装会自动 fallback 到应用外部目录（功能不受影响）。</td></tr>
+  <tr><td>打开 MEMC 应用没反应</td><td>① 总开关没开；② <code>logcat -s ORR/IrisExec</code> 看 <code>irisConfig</code> 是否执行成功；③ 确认 <code>/odm/bin/irisConfig</code> 存在（不存在时 MEMC 自动禁用并在日志说明）。</td></tr>
+  <tr><td>插帧没效果</td><td>核对命令格式（游戏 6 参 / 视频 3 参）、预设编号、Param 5 原始帧率；用 <code>irisConfig -getfeature 56</code> 确认芯片是否切到 PT。</td></tr>
+  <tr><td>某些应用掉到 60Hz</td><td>确认用智能模式（静止 3 秒才降档是正常行为）；持续掉帧抓 <code>logcat -s ORR/Scene ORR/Service</code> 看投票结果。</td></tr>
+  <tr><td>屏幕冻结史（本机 known issue）</td><td>本应用的兜底逻辑保证任何异常路径都回 ABYP。若手动玩 <code>irisConfig</code> 后出问题，执行 <code>irisConfig 56 1</code> 可立即回旁路。</td></tr>
+</table>
+
+<h2 id="logcat">日志标签</h2>
+<table>
+  <tr><th>Tag</th><th>内容</th></tr>
+  <tr><td><code>ORR/Service</code></td><td>服务生命周期、模式切换</td></tr>
+  <tr><td><code>ORR/Scene</code></td><td>前台应用、场景投票</td></tr>
+  <tr><td><code>ORR/PerApp</code></td><td>每应用规则加载与投票</td></tr>
+  <tr><td><code>ORR/Iris</code></td><td>MEMC 状态机（进/出序列、generation）</td></tr>
+  <tr><td><code>ORR/IrisExec</code></td><td>每条 irisConfig 命令的执行结果</td></tr>
+</table>
+
+</body>
+</html>

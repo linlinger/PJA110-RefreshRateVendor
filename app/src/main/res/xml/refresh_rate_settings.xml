@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Copyright (C) 2026 Oplus Project
+     SPDX-License-Identifier: Apache-2.0
+-->
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <ListPreference
+        android:key="refresh_rate_mode"
+        android:title="@string/refresh_rate_title"
+        android:summary="@string/refresh_rate_summary"
+        android:entries="@array/refresh_rate_entries"
+        android:entryValues="@array/refresh_rate_values"
+        android:defaultValue="0" />
+
+    <SwitchPreferenceCompat
+        android:key="iris_memc"
+        android:title="@string/iris_title"
+        android:summary="@string/iris_desc"
+        android:defaultValue="false" />
+
+    <Preference
+        android:key="per_app_rules"
+        android:title="@string/per_app_title"
+        android:summary="@string/per_app_summary">
+        <intent android:action="com.oplus.refreshrate.PER_APP_RULES" />
+    </Preference>
+
+    <Preference
+        android:key="help"
+        android:title="@string/settings_help_entry"
+        android:summary="@string/settings_help_summary">
+        <intent android:action="com.oplus.refreshrate.HELP" />
+    </Preference>
+
+</PreferenceScreen>
