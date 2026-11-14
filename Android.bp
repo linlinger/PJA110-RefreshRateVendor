@@ -31,9 +31,7 @@ android_app {
         enabled: false,
     },
 
-    lint: {
-        check_all_warnings: true,
-    },
+    // A17 soong 无 lint.check_all_warnings 属性, lint 配置移除
 
     min_sdk_version: "34",
     target_sdk_version: "35",
