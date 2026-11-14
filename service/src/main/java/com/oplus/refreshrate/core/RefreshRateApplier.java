@@ -15,7 +15,6 @@ package com.oplus.refreshrate.core;
 
 import android.content.Context;
 import android.os.IBinder;
-import android.os.ServiceManager;
 import android.util.Log;
 
 import java.io.File;
@@ -74,26 +73,15 @@ public class RefreshRateApplier {
         try {
             // 1. 通过 DisplayManager 设置用户偏好模式 (真正的锁定)
             //    setRefreshRateSwitchingType(NONE) = 禁止自动切换
-            android.hardware.display.DisplayManager dm =
-                    (android.hardware.display.DisplayManager)
-                    sContext.getSystemService(Context.DISPLAY_SERVICE);
-            if (dm != null) {
-                try {
-                    dm.setRefreshRateSwitchingType(
-                            android.hardware.display.DisplayManager
-                                    .SWITCHING_TYPE_NONE);
-                    Log.i(TAG, "switching type locked to NONE");
-                } catch (Exception e) {
-                    Log.e(TAG, "setRefreshRateSwitchingType failed: "
-                            + e.getMessage());
-                }
-            }
+            //    @hide API → 反射调用 (system_current SDK 无此符号)
+            setSwitchingType(SWITCHING_TYPE_NONE);
 
             // 2. 同步 peak_refresh_rate (系统"流畅画面"会压刷新率, 必须同步)
+            //    putFloat 是 @hide, 等价用公开 API putString (AOSP putFloat 内部即如此)
             try {
-                android.provider.Settings.System.putFloat(
+                android.provider.Settings.System.putString(
                         sContext.getContentResolver(),
-                        "peak_refresh_rate", rate);
+                        "peak_refresh_rate", Float.toString(rate));
                 Log.i(TAG, "peak_refresh_rate set to " + rate);
             } catch (Exception e) {
                 Log.e(TAG, "set peak_refresh_rate failed: " + e.getMessage());
@@ -105,6 +93,27 @@ public class RefreshRateApplier {
             Log.i(TAG, "set userPreferredDisplayMode=" + modeId + " → " + ok);
         } catch (Exception e) {
             Log.e(TAG, "SF apply failed", e);
+        }
+    }
+
+    /** 反射调 DisplayManager.setRefreshRateSwitchingType (@hide, @TestApi) */
+    private static final int SWITCHING_TYPE_NONE = 0;
+    private static final int SWITCHING_TYPE_ACROSS_AND_WITHIN_GROUPS = 3;
+
+    private static void setSwitchingType(int type) {
+        try {
+            android.hardware.display.DisplayManager dm =
+                    (android.hardware.display.DisplayManager)
+                    sContext.getSystemService(Context.DISPLAY_SERVICE);
+            if (dm == null) {
+                Log.w(TAG, "DisplayManager null, skip switching type");
+                return;
+            }
+            dm.getClass().getMethod("setRefreshRateSwitchingType", int.class)
+                    .invoke(dm, type);
+            Log.i(TAG, "switching type set to " + type);
+        } catch (Exception e) {
+            Log.e(TAG, "setRefreshRateSwitchingType failed: " + e.getMessage());
         }
     }
 
@@ -153,16 +162,8 @@ public class RefreshRateApplier {
             return;
         }
         try {
-            // 1. 恢复自动切换
-            android.hardware.display.DisplayManager dm =
-                    (android.hardware.display.DisplayManager)
-                    sContext.getSystemService(Context.DISPLAY_SERVICE);
-            if (dm != null) {
-                dm.setRefreshRateSwitchingType(
-                        android.hardware.display.DisplayManager
-                                .SWITCHING_TYPE_ACROSS_AND_WITHIN_GROUPS);
-                Log.i(TAG, "switching type restored to ACROSS_AND_WITHIN_GROUPS");
-            }
+            // 1. 恢复自动切换 (@hide → 反射)
+            setSwitchingType(SWITCHING_TYPE_ACROSS_AND_WITHIN_GROUPS);
 
             // 2. 清除用户偏好模式
             try {
@@ -182,9 +183,9 @@ public class RefreshRateApplier {
 
             // 3. 重置 peak_refresh_rate (恢复系统默认, 防止残留锁定值导致风暴)
             try {
-                android.provider.Settings.System.putFloat(
+                android.provider.Settings.System.putString(
                         sContext.getContentResolver(),
-                        "peak_refresh_rate", 120.0f);
+                        "peak_refresh_rate", Float.toString(120.0f));
                 Log.i(TAG, "peak_refresh_rate reset to 120.0 (default)");
             } catch (Exception e) {
                 Log.e(TAG, "reset peak_refresh_rate failed: " + e.getMessage());

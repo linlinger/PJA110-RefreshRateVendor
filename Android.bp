@@ -21,13 +21,14 @@ android_app {
     certificate: "platform",
     privileged: true,
     vendor: true,
-    // 直接使用 android.os.ServiceManager 等 @hide API, 必须编进平台
-    // (vendor 分区 + 空 sdk_version 必须配 platform_apis: true)
-    platform_apis: true,
-    // vendor priv-app 需要私有平台 API 时再改 use_embedded_native_libs 等
+    // A17 soong 强制 vendor 分区模块必须显式 sdk_version 且禁止 platform_apis,
+    // 因此本模块编 system_current SDK; @hide API (ServiceManager/
+    // setRefreshRateSwitchingType) 一律运行时反射获取, 见 RefreshRateApplier.java
+    sdk_version: "system_current",
 
     static_libs: [
         "androidx.preference_preference",
+        "SettingsLibCollapsingToolbarBaseActivity",
     ],
 
     optimize: {
