@@ -21,6 +21,9 @@ android_app {
     certificate: "platform",
     privileged: true,
     vendor: true,
+    // 直接使用 android.os.ServiceManager 等 @hide API, 必须编进平台
+    // (vendor 分区 + 空 sdk_version 必须配 platform_apis: true)
+    platform_apis: true,
     // vendor priv-app 需要私有平台 API 时再改 use_embedded_native_libs 等
 
     static_libs: [
