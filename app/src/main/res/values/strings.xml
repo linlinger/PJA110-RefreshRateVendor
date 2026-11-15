@@ -46,6 +46,8 @@
     <string name="per_app_memc_default">Default (decided by iris_config.json)\nOn if the package is listed in the config, off otherwise</string>
     <string name="per_app_memc_force_on">Force on\nEnter MEMC even if this package is not in iris_config.json</string>
     <string name="per_app_memc_force_off">Force off\nNever enter MEMC even if the package is configured</string>
+    <string name="per_app_memc_on">on</string>
+    <string name="per_app_memc_off">off</string>
     <string name="per_app_params_label">MEMC parameters (advanced, optional)</string>
     <string name="per_app_params_desc">One iris command per line; leave empty to use the parameters from iris_config.json. Format: Type followed by space-separated parameters.</string>
     <string name="per_app_params_hint">One command per line, e.g.:\n258 3 10 0 1\n273 3 1 255 2\nLeave empty to use iris_config.json parameters</string>

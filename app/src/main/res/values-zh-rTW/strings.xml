@@ -46,6 +46,8 @@
     <string name="per_app_memc_default">預設 (由 iris_config.json 決定)\n設定檔內有該套件名就開, 沒有就不開</string>
     <string name="per_app_memc_force_on">強制開啟\n即使 iris_config.json 沒設定這個套件名也進 MEMC</string>
     <string name="per_app_memc_force_off">強制關閉\n即使設定檔內有該套件名也不進 MEMC</string>
+    <string name="per_app_memc_on">開</string>
+    <string name="per_app_memc_off">關</string>
     <string name="per_app_params_label">MEMC 參數 (進階, 可留空)</string>
     <string name="per_app_params_desc">每行一條 iris 命令, 留空則使用 iris_config.json 中該應用程式的參數。命令格式: Type 後跟若干參數, 空格分隔。</string>
     <string name="per_app_params_hint">每行一條命令, 如:\n258 3 10 0 1\n273 3 1 255 2\n留空則使用 iris_config.json 的參數</string>
